@@ -1,51 +1,43 @@
 # Diff Review Tiers
 
-**Status: under construction. Nothing has been measured. There are no results.**
+**Dirty Mode source construction. Runtime unverified. Nothing has been measured.**
 
-Diff Review Tiers is a small, preregistered study tool for one question:
+Does ordering agent-written TypeScript diff hunks by a frozen structural risk policy expose more planted defects within a primary budget of 20% of changed lines than the stronger size ordering? What clean and defensive code does it send to tier 2?
 
-> Given an agent-written TypeScript change split into hunks, does ordering the hunks by a frozen, predeclared
-> structural risk-tier policy **expose** more planted defects within a fixed changed-line budget (20% of the
-> change's added plus deleted lines) than the stronger of two size orderings, and how much clean and
-> clean-but-defensive code does the policy send to the top tier?
+The endpoint is **defect exposure recall**: every required changed-line atom lies in the allocated reading prefix. It measures attention allocation. No claim about reviewer discovery, agent versus human performance or causality follows. There is no composite quality metric.
 
-"Exposed" means every changed line a defect requires falls inside the budgeted reading prefix. The primary
-endpoint is called **defect exposure recall**. It measures how review attention is allocated, not whether a
-reviewer would find anything.
+## Built
 
-## What it is
+- Parse-only `.ts`/`.tsx` analysis from ChangeV1 JSON or a read-only git adapter: hunks, atoms, cyclomatic growth, changed catches, test references, token clones, unreachable statements and size. Unknown/ambiguous analysis stays visible as manual review.
+- Policy, ordering and evaluation source: both size baselines, seeded random, structural baselines, budget slicer, root bootstrap, dev selection and freeze/held-out custody controls. These implementations are accepted for static construction; runtime validation is deferred. A source implementation is not a completed study.
+- An independent-author packet and corpus consumer. Corpus roots, labels and witnesses must come from a fresh non-builder session appointed by Roy; engineering fixtures in fixtures/demo/ are excluded from study evaluation.
+- Keyless reviewer contract/mock, localization matcher, disabled live ledger, external capture adapters and static viewer. Construction review is complete; its records live outside this product repo. No runtime success is asserted.
+- Protocol docs, JSON schemas, release runbook and an honest results template. Candidate policy thresholds and preregistration remain unfrozen.
 
-- A keyless TypeScript analyser for `.ts`/`.tsx` changes: hunks, changed-line atoms, and a few syntactic metrics
-  (cyclomatic growth, changed catch blocks that may swallow errors, untested changed functions, token clones,
-  unreachable statements, size). Every metric is a value or `unknown`, never a silent zero.
-- A tier policy (tier 2, 1, 0, plus `manual` when analysis is incomplete) whose thresholds are chosen once on a
-  development split and then frozen.
-- An evaluator that compares the tier ordering against size, file-type, complexity, clone, random and external
-  baselines on a sealed held-out split of an independently authored synthetic corpus.
-- A static viewer for the demo analysis and, later, the results table.
+## Never run
 
-## What it is not
+Dependency installation, type checking, linting, tests, builds, the analyzer, demo, viewer, policy tuning, freeze, corpus admission, external captures and held-out evaluation have never run. No lockfile or measured results exist. Static source reviews and syntax parsing are the only construction checks. See [deferred validation](docs/DEFERRED-VALIDATION.md) and [limitations](docs/LIMITATIONS.md).
 
-- Not a code-quality or "bloat" score. There is no score of any kind and no composite metric.
-- Not an agent-versus-human comparison and not a causal claim.
-- Not a reviewer. No language-model call is made; the optional reviewer arm exists only as a keyless mock and a
-  spend ledger capped at $0.
+The primary budget is 20%; sensitivity budgets are 10% and 30%. These are protocol constants, not results. A null or inconclusive result must be reported. Jev was considered and not used; AIDev is outside the MVP.
 
-## Built vs never run
+## Later local use
 
-**Built so far (milestone M1, Dirty Mode construction, static checks only):** the repository skeleton, the
-corpus contract (`src/corpus/contract.ts`), analysis types (`src/core/types.ts`), JSON Schemas (`schemas/`),
-the candidate policy space (`policy.json`, nothing selected), a draft preregistration skeleton
-(`preregistration.json`, status `draft-unfrozen`), the protocol hashing script (`scripts/hash-protocol.ts`), the
-protocol documents and demo fixtures.
+After Roy closes Dirty Mode, verify dependency versions, then install with `npm install` and commit the resulting lockfile. Follow [RUNBOOK-P6](docs/RUNBOOK-P6.md) for validation and admission before tuning/freezing/evaluation.
 
-**Never run:** dependency installation, type checking, linting, tests, the analyser, the viewer, policy tuning,
-the freeze, and any evaluation. There is no lockfile yet. The independent corpus does not exist yet, so no
-number about the claim exists. A null result is likely and will be published if it happens. Every deferred check
-is listed in `docs/DEFERRED-VALIDATION.md`.
+```sh
+npm run typecheck
+npm test
+npm run build
+npm run analyze -- fixtures/demo/rate-limiter-feature.json
+npm run demo
+npm run dev
+npm run check-readme-numbers
+```
 
-Jev was considered and not used.
+These commands are instructions for the later authorized phase, not execution receipts. Node >= 20 is declared; exact tool compatibility remains unverified. The browser consumes only static public JSON. No database, auth, edge functions, secrets or live adapter are required; see [Bolt handoff](BOLT-HANDOFF.md). Missing external baselines remain not captured, never zero. Arm B is not run; mock output is never a study result.
 
-## Licence
+The local ledger defaults to cap USD 0 with live dispatch disabled. Roy's USD 40 ceiling does not supply a model, credentials or live-run approval. No remote, push, import, publication or deployment is authorized by this repository.
 
-MIT. All data in this repository is original and synthetic.
+## License
+
+MIT. Demo inputs are original synthetic engineering examples. The independent study corpus is not present. Dependency license checks remain pending; see [VENDORED](VENDORED.md).
