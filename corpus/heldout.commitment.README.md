@@ -6,20 +6,23 @@ Builders never write this file; the Normal-mode gate operator copies it here fro
 
 ## Purpose
 
-The held-out split stays sealed in the outer shell (`sealed\heldout\`) until the held-out run. This file is the only
-held-out artefact that enters the repo before the freeze. It commits, byte for byte, to every sealed held-out file and to
-the edition manifest, so that any later change to held-out data, labels or the manifest is detectable.
+The held-out split stays sealed in the outer shell (`sealed\heldout\`) until the held-out run. After Gate 1, this
+commitment and the explicitly approved full-edition manifest metadata enter the repo before freeze (see DATA section 7
+and the integrator's M2 reconciliation); no held-out source, label values, witnesses, receipts or inventory contents do.
+The commitment binds every sealed held-out file and the exact manifest bytes, making later changes detectable.
 
 ## Files the gate operator places in `corpus/` after Gate 1
 
 | repo path | source in C1's delivery | content |
 |---|---|---|
-| `corpus/manifest.json` | `manifest.json` | the edition's `CorpusManifestV1` (both splits; held-out entries are hashes only) |
+| `corpus/manifest.json` | `manifest.json` | full `CorpusManifestV1` metadata: both splits' ids, root links, TSX flags, provenance, seeds, protocol hashes, file paths and hashes; no source/label/witness contents |
 | `corpus/dev/**` | `dev/**` | the dev split |
 | `corpus/heldout.commitment.json` | `heldout.commitment.json` | this commitment |
 
-`heldout/**` goes to `sealed\heldout\` (contents of `heldout/`, so key `heldout/inputs/x.json` is
-`sealed\heldout\inputs\x.json`), never into the repo.
+C1 or a separately Roy-appointed non-builder custodian seals `heldout/**` in `sealed\heldout\` (contents of `heldout/`,
+so key `heldout/inputs/x.json` is `sealed\heldout\inputs\x.json`) and writes custody receipts. The non-builder gate
+operator directs/verifies this step; it writes sealed contents only if also explicitly appointed custodian. All listed
+repo copies happen only after a recorded Gate 1 pass and label-neutral path check, never as pre-Gate-1 construction.
 
 ## Shape (`HeldoutCommitmentV1`, defined in `src/corpus/port.ts`)
 

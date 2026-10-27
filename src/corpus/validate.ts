@@ -103,9 +103,9 @@ export const GATE1_PREDICATE_MAP: readonly Gate1PredicateEntry[] = [
   {
     item: '7.3.1',
     text: 'witness passes on clean twin and fails on defect head at the named test; base-sanity passes on base; clean heads and near-misses pass all witnesses; equivalent mutants listed',
-    checkedBy: ['checkReceiptReferences'],
+    checkedBy: ['checkReceiptReferences', 'checkDeliveredTestIdentity'],
     normalModeOnly:
-      'executing the witnesses (C1 harness, Normal mode). From files only the receipts can be checked: self-hash, and that every label hash references a receipt with the right change, side, outcome and failed test. Equivalent mutants are listed in each placement record (rejected, reason equivalent); reading that list is a gate-operator step.',
+      'C1 check-data and the independent gate operator must run checkReceiptReferences and checkDeliveredTestIdentity, hash the actual delivered test bytes against manifest.files/testHash, and reconstruct each executed source tree to verify sourceHash. Actual execution and named-test selection are independently rechecked in Normal mode; receipt agreement alone does not prove execution. Equivalent mutants are listed in each placement record (rejected, reason equivalent); reading that list is a gate-operator step.',
   },
   {
     item: '7.3.2',
@@ -389,7 +389,7 @@ function checkOneLabelSchema(label: unknown, i: number, problems: string[]): voi
       for (const id of t) if (typeof id !== 'string' || !/^N[1-8]$/.test(id)) problems.push(`${where}.trapIds has ${String(id)}`);
     }
   }
-  if (!Array.isArray(label.baseSanityReceipts)) problems.push(`${where}.baseSanityReceipts must be an array`);
+  if (!Array.isArray(label.baseSanityReceipts) || label.baseSanityReceipts.length === 0) problems.push(`${where}.baseSanityReceipts must be a non-empty array`);
   else
     label.baseSanityReceipts.forEach((r, j) => {
       const at2 = `${where}.baseSanityReceipts[${j}]`;
@@ -844,6 +844,19 @@ export async function verifyCommitment(
 // 7.3.1 receipts (file-checkable part)
 // ---------------------------------------------------------------------------------------------------------------
 
+function namedTestPattern(name: string): string {
+  return `^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`;
+}
+
+/** Packet command convention: one delivered test file, optionally one exact full test title. */
+function receiptTestPath(receipt: Record<string, unknown>): string | undefined {
+  const command = receipt.command;
+  if (!Array.isArray(command) || !command.every(isNonEmptyString)) return undefined;
+  if (command[0] !== 'vitest' || command[1] !== 'run') return undefined;
+  if (command.length !== 3 && !(command.length === 5 && command[3] === '--testNamePattern')) return undefined;
+  return command[2] as string;
+}
+
 /**
  * plan 7.3 predicate 1, file-checkable part. Each receipt's `sha256` must equal sha256(canonicalJson(receipt without
  * sha256)). Each label hash must name a delivered receipt with the expected change, side and outcome:
@@ -851,7 +864,8 @@ export async function verifyCommitment(
  * - `defect.headAssertionFailureHash` -> changeId = the defect,  side head, outcome assertion_fail, failedTest = witnessTest
  * - `cleanWitnesses[].headPassHash`   -> changeId = the label,   side head, outcome pass
  * - `baseSanityReceipts[].basePassHash` -> changeId = the label, side base, outcome pass
- * Whether the witnesses really behave so is decided only by executing them (Normal mode).
+ * Each defect pair also binds identical testHash, command (including exact named-test selection), and harnessVersion.
+ * Delivered test-byte identity is checked separately by checkDeliveredTestIdentity. Actual execution is Normal-mode only.
  */
 export function checkReceiptReferences(labels: readonly LabelV1[], receipts: readonly unknown[]): PredicateResult[] {
   const selfProblems: string[] = [];
@@ -862,6 +876,17 @@ export function checkReceiptReferences(labels: readonly LabelV1[], receipts: rea
       return;
     }
     if (r.schema !== 's45.receipt/1') selfProblems.push(`receipts[${i}].schema invalid`);
+    if (!isSha(r.testHash) || !isSha(r.sourceHash)) selfProblems.push(`receipts[${i}] sourceHash/testHash invalid`);
+    if (!isNonEmptyString(r.harnessVersion)) selfProblems.push(`receipts[${i}].harnessVersion empty`);
+    if (receiptTestPath(r) === undefined) selfProblems.push(`receipts[${i}].command must select one delivered test file`);
+    if (!['pass', 'assertion_fail', 'other_fail', 'timeout'].includes(String(r.outcome))) {
+      selfProblems.push(`receipts[${i}].outcome invalid`);
+    }
+    if (!Number.isInteger(r.exitCode) || (r.outcome === 'pass' ? r.exitCode !== 0 : r.exitCode === 0)) {
+      selfProblems.push(`receipts[${i}] outcome/exitCode inconsistent`);
+    }
+    if (r.outcome === 'pass' && 'failedTest' in r) selfProblems.push(`receipts[${i}] pass cannot name a failedTest`);
+    if (r.outcome === 'assertion_fail' && !isNonEmptyString(r.failedTest)) selfProblems.push(`receipts[${i}] assertion_fail needs failedTest`);
     const claimed = r.sha256;
     if (!isSha(claimed)) {
       selfProblems.push(`receipts[${i}].sha256 not sha256 hex`);
@@ -893,6 +918,7 @@ export function checkReceiptReferences(labels: readonly LabelV1[], receipts: rea
     }
   };
   for (const l of labels) {
+    if (l.baseSanityReceipts.length === 0) refProblems.push(`${l.changeId}: baseSanityReceipts must be non-empty`);
     if (l.defect !== undefined) {
       const d = l.defect;
       expectReceipt(d.cleanHeadPassHash, `${l.changeId}.cleanHeadPassHash`, { changeId: d.cleanTwinId, side: 'head', outcome: 'pass' });
@@ -902,6 +928,19 @@ export function checkReceiptReferences(labels: readonly LabelV1[], receipts: rea
         outcome: 'assertion_fail',
         failedTest: d.witnessTest,
       });
+      const clean = bySha.get(d.cleanHeadPassHash);
+      const failure = bySha.get(d.headAssertionFailureHash);
+      if (clean !== undefined && failure !== undefined) {
+        for (const key of ['testHash', 'command', 'harnessVersion'] as const) {
+          if (canonicalJson(clean[key]) !== canonicalJson(failure[key])) refProblems.push(`${l.changeId}: witness ${key} differs between clean and defect`);
+        }
+        for (const r of [clean, failure]) {
+          const command = r.command;
+          if (!Array.isArray(command) || command.length !== 5 || command[3] !== '--testNamePattern' || command[4] !== namedTestPattern(d.witnessTest)) {
+            refProblems.push(`${l.changeId}: witness command must select exactly ${d.witnessTest}`);
+          }
+        }
+      }
     }
     for (const w of l.cleanWitnesses ?? []) {
       expectReceipt(w.headPassHash, `${l.changeId}.cleanWitnesses(${w.path})`, { changeId: l.changeId, side: 'head', outcome: 'pass' });
@@ -914,6 +953,48 @@ export function checkReceiptReferences(labels: readonly LabelV1[], receipts: rea
     result('7.3.1 receipts.self-hash', selfProblems, `${receipts.length} receipts self-hash verified`),
     result('7.3.1 receipts.references', refProblems, 'every label hash references a matching receipt'),
   ];
+}
+
+/**
+ * Bind every referenced test to its delivered manifest entry, without executing it. Label paths are relative to
+ * <split>/witnesses/<rootId>/. Defect witness paths come from the same canonical command in both receipts.
+ * C1/check-data and the independent gate operator must additionally hash the ACTUAL delivered bytes and reconstruct
+ * executed sourceHash (Normal mode). A manifest/hash agreement cannot prove that the recorded command was executed.
+ */
+export function checkDeliveredTestIdentity(
+  labels: readonly LabelV1[],
+  receipts: readonly unknown[],
+  manifest: CorpusManifestV1,
+): PredicateResult[] {
+  const problems: string[] = [];
+  const bySha = new Map<string, Record<string, unknown>>();
+  for (const r of receipts) if (isRecord(r) && isSha(r.sha256)) bySha.set(r.sha256, r);
+  const check = (l: LabelV1, hash: string, relativePath?: string): void => {
+    const r = bySha.get(hash);
+    if (r === undefined) {
+      problems.push(`${l.changeId}: missing receipt ${hash}`);
+      return;
+    }
+    const prefix = `${l.split}/witnesses/${l.rootId}/`;
+    const commandPath = receiptTestPath(r);
+    const expectedPath = relativePath === undefined ? commandPath : `${prefix}${relativePath}`;
+    if (expectedPath === undefined || !expectedPath.startsWith(prefix) || !isSplitFileKey(expectedPath) || commandPath !== expectedPath) {
+      problems.push(`${l.changeId}: receipt test path does not match delivered witness path`);
+      return;
+    }
+    const expectedHash = manifest.files[expectedPath];
+    if (expectedHash === undefined || r.testHash !== expectedHash) problems.push(`${l.changeId}: testHash does not match manifest file ${expectedPath}`);
+  };
+  for (const l of labels) {
+    if (l.defect !== undefined) {
+      check(l, l.defect.cleanHeadPassHash);
+      check(l, l.defect.headAssertionFailureHash);
+    }
+    for (const w of l.cleanWitnesses ?? []) check(l, w.headPassHash, w.path);
+    if (l.baseSanityReceipts.length === 0) problems.push(`${l.changeId}: baseSanityReceipts must be non-empty`);
+    for (const b of l.baseSanityReceipts) check(l, b.basePassHash, b.path);
+  }
+  return [result('7.3.1 receipts.delivered-test-identity', problems, 'every referenced test path/hash matches the delivery manifest')];
 }
 
 // ---------------------------------------------------------------------------------------------------------------

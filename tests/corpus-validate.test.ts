@@ -15,6 +15,7 @@ import {
   canonicalJson,
   checkAuthorIndependence,
   checkCounts,
+  checkDeliveredTestIdentity,
   checkReceiptReferences,
   checkRequiredAtomsExist,
   checkSizeBalance,
@@ -64,7 +65,7 @@ function makeFixture(): Fixture {
         files[`${split}/labels/${id}.json`] = labelHash;
         labels.push(label);
       };
-      const base = { schema: 's45.label/1' as const, rootId, split, baseSanityReceipts: [] };
+      const base = { schema: 's45.label/1' as const, rootId, split, baseSanityReceipts: [{ path: 'base.test.ts', basePassHash: h('base') }] };
       mk(cleanId, { ...base, changeId: cleanId, kind: 'clean', cleanWitnesses: [{ path: 'w.test.ts', headPassHash: h('w') }] });
       [FAMILIES[(2 * i) % 8], FAMILIES[(2 * i + 1) % 8]].forEach((family, slot) => {
         const fam = family as Family;
@@ -180,6 +181,14 @@ describe('checkCounts (plan 7.3 predicate 2)', () => {
 describe('validateLabels (schema + FAMILIES.md consistency)', () => {
   it('accepts the fixture labels', () => {
     expect(failed(validateLabels(makeFixture().labels))).toEqual([]);
+  });
+
+  it('rejects an otherwise valid label with no base-sanity evidence (M2 B1)', () => {
+    const { labels } = makeFixture();
+    const label = labels[0];
+    if (label === undefined) throw new Error('fixture');
+    label.baseSanityReceipts = [];
+    expect(failed(validateLabels(labels))).toContain('7.3.3 schema.labels');
   });
 
   it('rejects an operator from another family, a wrong anchor and a wrong signatureBearing', () => {
@@ -317,7 +326,7 @@ describe('checkReceiptReferences (7.3.1 file-checkable part)', () => {
   const receipt = (fields: Record<string, unknown>) => {
     const body = {
       schema: 's45.receipt/1',
-      command: ['vitest', 'run'],
+      command: ['vitest', 'run', 'dev/witnesses/r1/w.test.ts', '--testNamePattern', '^w > t$'],
       exitCode: 0,
       sourceHash: h('src'),
       testHash: h('test'),
@@ -328,10 +337,10 @@ describe('checkReceiptReferences (7.3.1 file-checkable part)', () => {
     return { ...body, sha256: sha256Hex(canonicalJson(body)) };
   };
 
-  it('accepts matching receipts and rejects a tampered one', () => {
-    const pass = receipt({ changeId: 'c1', side: 'head', outcome: 'pass' });
-    const fail = receipt({ changeId: 'd1', side: 'head', outcome: 'assertion_fail', exitCode: 1, failedTest: 'w > t' });
-    const base = receipt({ changeId: 'd1', side: 'base', outcome: 'pass' });
+  function fixture(passFields: Record<string, unknown> = {}, failFields: Record<string, unknown> = {}) {
+    const pass = receipt({ changeId: 'c1', side: 'head', outcome: 'pass', ...passFields });
+    const fail = receipt({ changeId: 'd1', side: 'head', outcome: 'assertion_fail', exitCode: 1, failedTest: 'w > t', ...failFields });
+    const base = receipt({ changeId: 'd1', side: 'base', outcome: 'pass', command: ['vitest', 'run', 'dev/witnesses/r1/b.test.ts'] });
     const label: LabelV1 = {
       schema: 's45.label/1',
       changeId: 'd1',
@@ -352,12 +361,64 @@ describe('checkReceiptReferences (7.3.1 file-checkable part)', () => {
       },
       baseSanityReceipts: [{ path: 'b.test.ts', basePassHash: base.sha256 }],
     };
+    const manifest = makeFixture().manifest;
+    manifest.files['dev/witnesses/r1/w.test.ts'] = h('test');
+    manifest.files['dev/witnesses/r1/b.test.ts'] = h('test');
+    return { pass, fail, base, label, manifest };
+  }
+
+  it('accepts matching receipts and rejects a tampered one', () => {
+    const { pass, fail, base, label, manifest } = fixture();
     expect(allOk(checkReceiptReferences([label], [pass, fail, base]))).toBe(true);
+    expect(allOk(checkDeliveredTestIdentity([label], [pass, fail, base], manifest))).toBe(true);
     const tampered = { ...fail, failedTest: 'other' };
     expect(failed(checkReceiptReferences([label], [pass, tampered, base]))).toEqual([
       '7.3.1 receipts.self-hash',
       '7.3.1 receipts.references',
     ]);
+  });
+
+  it('rejects absent base-sanity references even without a prior schema check (M2 B1)', () => {
+    const { pass, fail, label } = fixture();
+    label.baseSanityReceipts = [];
+    expect(failed(checkReceiptReferences([label], [pass, fail]))).toContain('7.3.1 receipts.references');
+  });
+
+  it('rejects different clean and defect witness bytes (M2 B2)', () => {
+    const { pass, fail, base, label } = fixture({ testHash: h('unrelated test') });
+    expect(failed(checkReceiptReferences([label], [pass, fail, base]))).toEqual(['7.3.1 receipts.references']);
+  });
+
+  it('rejects an unrelated clean test selection, including a self-consistent unrelated pair (M2 B2)', () => {
+    const unrelated = { command: ['vitest', 'run', 'dev/witnesses/r1/w.test.ts', '--testNamePattern', '^unrelated$'] };
+    for (const failFields of [{}, unrelated]) {
+      const { pass, fail, base, label } = fixture(unrelated, failFields);
+      expect(failed(checkReceiptReferences([label], [pass, fail, base]))).toContain('7.3.1 receipts.references');
+    }
+  });
+
+  it('rejects outcome/exit-code contradictions and differing harnesses (M2 B2)', () => {
+    for (const [passFields, failFields] of [[{ exitCode: 1 }, {}], [{}, { exitCode: 0 }], [{}, { harnessVersion: 'other' }]]) {
+      const { pass, fail, base, label } = fixture(passFields, failFields);
+      expect(allOk(checkReceiptReferences([label], [pass, fail, base]))).toBe(false);
+    }
+  });
+
+  it('binds clean/base paths and defect commands to delivered test-file hashes (M2 B2)', () => {
+    const { pass, fail, base, label, manifest } = fixture();
+    manifest.files['dev/witnesses/r1/b.test.ts'] = h('different bytes');
+    expect(allOk(checkDeliveredTestIdentity([label], [pass, fail, base], manifest))).toBe(false);
+    manifest.files['dev/witnesses/r1/b.test.ts'] = h('test');
+    label.baseSanityReceipts[0] = { path: 'elsewhere.test.ts', basePassHash: base.sha256 };
+    expect(allOk(checkDeliveredTestIdentity([label], [pass, fail, base], manifest))).toBe(false);
+    const cleanLabel: LabelV1 = {
+      schema: 's45.label/1', changeId: 'c1', rootId: 'r1', split: 'dev', kind: 'clean',
+      cleanWitnesses: [{ path: 'elsewhere.test.ts', headPassHash: pass.sha256 }],
+      baseSanityReceipts: [{ path: 'b.test.ts', basePassHash: base.sha256 }],
+    };
+    expect(allOk(checkDeliveredTestIdentity([cleanLabel], [pass, base], manifest))).toBe(false);
+    const other = fixture({ command: ['vitest', 'run', 'dev/witnesses/r2/w.test.ts', '--testNamePattern', '^w > t$'] });
+    expect(allOk(checkDeliveredTestIdentity([other.label], [other.pass, other.fail, other.base], other.manifest))).toBe(false);
   });
 
   it('canonicalJson sorts keys at every depth', () => {
