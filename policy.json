@@ -1,0 +1,101 @@
+{
+  "schema": "s45.policy/1",
+  "version": "1.0.0-draft",
+  "planRevision": "4.1",
+  "ruleVersion": "m1",
+  "status": "candidate-space-unselected",
+  "searchSpace": {
+    "T": [2, 4, 6],
+    "N": [8, 12],
+    "cloneRule": false,
+    "note": "D10: 6 candidates, no clone rule. Clones stay a diagnostic and the clone-first baseline."
+  },
+  "candidates": [
+    { "id": "T2-N8", "T": 2, "N": 8 },
+    { "id": "T2-N12", "T": 2, "N": 12 },
+    { "id": "T4-N8", "T": 4, "N": 8 },
+    { "id": "T4-N12", "T": 4, "N": 12 },
+    { "id": "T6-N8", "T": 6, "N": 8 },
+    { "id": "T6-N12", "T": 6, "N": 12 }
+  ],
+  "rules": {
+    "tier2": [
+      {
+        "id": "R2-cyclomatic",
+        "text": "A matched or new production function intersecting the hunk has cyclomatic delta >= T (input: HunkMetrics.maxPositiveDelta)."
+      },
+      {
+        "id": "R2-catch",
+        "text": "A changed catch clause in a production file intersecting the hunk is catch_may_swallow (input: HunkMetrics.catchMaySwallow)."
+      },
+      {
+        "id": "R2-untested-size",
+        "text": "A changed production function intersecting the hunk has >= N statements and no_changed_test_reference = true (input: HunkMetrics.untestedChangedStatementMax)."
+      }
+    ],
+    "tier0": [
+      {
+        "id": "T0a",
+        "text": "Every changed line on both sides carries no non-trivia token (blank or comment-only), judged from a full-file createScanner pass with skipTrivia=false."
+      },
+      {
+        "id": "T0b",
+        "text": "The hunk's base-side and head-side non-trivia token sequences (kind + text) are equal (whitespace/comment/formatting-only change)."
+      },
+      {
+        "id": "T0c",
+        "text": "Every changed line lies inside a top-level ImportDeclaration and the multiset of whitespace-normalised import declaration texts of that file is equal on both sides (pure reordering)."
+      },
+      {
+        "id": "T0d",
+        "text": "The hunk is in a test file."
+      }
+    ],
+    "manual": [
+      {
+        "id": "M-parse",
+        "text": "A file the hunk touches failed to parse (D35: non-empty parseDiagnostics) on either side."
+      },
+      {
+        "id": "M-ambiguous",
+        "text": "An atom of the hunk intersects an ambiguous function in a production file."
+      }
+    ]
+  },
+  "tierAssignment": {
+    "precedence": ["manual", "tier2", "tier0", "tier1"],
+    "text": "The first matching class wins: manual (any manual rule), then tier 2 (any tier-2 rule), then tier 0 (no tier-2 rule fires and any tier-0 rule holds), else tier 1. Manual wins over tier 0 and tier 2 wins over tier 0 (plan 8.2)."
+  },
+  "readingOrder": {
+    "groups": [["tier2", "manual"], ["tier1"], ["tier0"]],
+    "withinGroup": "tieKey",
+    "text": "Tier 2 and manual hunks first, ordered together by tie key; then tier 1; then tier 0 (plan 8.2, D35)."
+  },
+  "tieKey": {
+    "id": "s45-tie-v1",
+    "algorithm": "sha256",
+    "input": "s45-tie-v1|{changeId}|{hunkId}",
+    "output": "lowercase hex",
+    "order": "ascending"
+  },
+  "selection": {
+    "split": "dev",
+    "budgetPercent": 20,
+    "objective": "maximum dev micro exposure recall@20",
+    "guards": [
+      {
+        "id": "D11-all",
+        "text": "Tier-2 share (manual counted as tier 2) of all dev atoms",
+        "max": 0.4
+      },
+      {
+        "id": "D11-clean",
+        "text": "Tier-2 share (manual counted as tier 2) of all clean dev atoms, clean twins and near-misses pooled",
+        "max": 0.25
+      }
+    ],
+    "tieBreak": ["lower clean tier-2 share", "larger T", "larger N"],
+    "noValidCandidate": "Publish 'no valid policy in the declared space' and stop before held-out."
+  },
+  "selected": null
+}

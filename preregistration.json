@@ -1,0 +1,115 @@
+{
+  "schema": "s45.prereg/1",
+  "status": "draft-unfrozen",
+  "planRevision": "4.1",
+  "claim": "Ordering an agent-written TypeScript change's hunks by the frozen structural risk-tier policy exposes more planted held-out defects within 20% of the change's changed-line atoms than the stronger of size-desc and size-asc (chosen on dev). Arm A has no reviewer: it measures allocation, not discovery.",
+  "corpus": {
+    "source": "s45-own",
+    "rootsPerSplit": 20,
+    "changesPerSplit": 80,
+    "defectsPerSplit": 40,
+    "defectsPerFamilyPerSplit": 5,
+    "commitmentHash": null,
+    "manifestHash": null
+  },
+  "unit": {
+    "budgetUnit": "changed-line atoms (added + deleted lines) per change; context shown, not charged",
+    "budgetsPercent": [10, 20, 30],
+    "primaryBudgetPercent": 20,
+    "budgetRule": "K = floor(p * L / 100) atoms of the ordered atom sequence, L = the change's total atoms",
+    "exposed": "every requiredAtoms entry of the defect lies inside the first K atoms"
+  },
+  "primaryEndpoint": {
+    "name": "defect exposure recall",
+    "metric": "micro exposure recall@20 = exposed held-out defects / admitted held-out defects",
+    "split": "heldout",
+    "hypothesis": "recall@20(tier-policy) - recall@20(primary size comparator) > 0",
+    "decisionRule": "Read only from the 95% percentile bootstrap interval of the paired difference: lower bound > 0 = supported; positive point estimate with interval crossing zero = inconclusive; otherwise not supported."
+  },
+  "secondaryEndpoints": [
+    "recall@10",
+    "recall@30",
+    "macro recall over roots",
+    "per-family recall",
+    "recall by signatureBearing",
+    "recall by anchorKind",
+    "tier-2 share of all atoms",
+    "tier-2 share of clean atoms (clean twins and near-misses reported separately)",
+    "clean changes with any tier-2 hunk",
+    "near-misses with a tier-2 hunk, by trap id",
+    "defects per 100 selected atoms",
+    "whole-hunk sensitivity (strict non-overflow prefix; only fully read hunks count)",
+    "manual hunk count per ordering",
+    "partial-hunk count per ordering"
+  ],
+  "policy": {
+    "candidates": ["T2-N8", "T2-N12", "T4-N8", "T4-N12", "T6-N8", "T6-N12"],
+    "selectedCandidateId": null,
+    "T": null,
+    "N": null,
+    "selectionRule": "max dev recall@20 subject to D11 guards (tier-2 share <= 0.40 of all dev atoms and <= 0.25 of clean dev atoms, clean twins and near-misses pooled, manual counted as tier 2); ties -> lower clean tier-2 share, larger T, larger N; none valid -> publish 'no valid policy in the declared space' and stop before held-out",
+    "degenerateGuard": { "maxTier2ShareAllDevAtoms": 0.4, "maxTier2ShareCleanDevAtoms": 0.25 }
+  },
+  "comparator": {
+    "primarySizeComparator": null,
+    "rule": "Evaluate size-desc and size-asc on dev at 20%; the higher dev recall@20 is the primary comparator; tie -> size-asc."
+  },
+  "baselines": [
+    "size-desc",
+    "size-asc",
+    "file-type",
+    "complexity-only",
+    "clone-first",
+    "random",
+    "jscpd",
+    "sarif:fallow",
+    "lizard",
+    "label-oracle",
+    "full-review"
+  ],
+  "seeds": {
+    "split": 45,
+    "placement": 450045,
+    "bootstrap": 45,
+    "randomBaseline": { "first": 4500, "last": 4599 }
+  },
+  "prng": {
+    "generator": "mulberry32 over a uint32 seed",
+    "index": "floor(u * n) with u = next uint32 / 2^32",
+    "shuffle": "Fisher-Yates, i from n-1 down to 1, swap i with index(i+1)",
+    "randomBaselineChangeSeed": "first 4 bytes (big-endian) of sha256('s45-rand|<s>|<changeId>'), Fisher-Yates over hunks pre-sorted by tie key"
+  },
+  "bootstrap": {
+    "method": "percentile",
+    "resamples": 10000,
+    "seed": 45,
+    "unit": "held-out root, resampled with replacement; both orderings on the same draw",
+    "quantiles": [0.025, 0.975],
+    "quantileType": 7,
+    "microRecallPerDraw": "pooled exposed / pooled defects over the drawn roots, multiplicity kept",
+    "undefinedDrawLimit": 0.1,
+    "undefinedRule": "more than 10% undefined draws -> interval 'undefined'"
+  },
+  "singleProportionInterval": "Wilson 95%",
+  "precisionRule": {
+    "halfWidthPercentagePointsImpreciseAbove": 15,
+    "text": "95% half-width = (hi - lo) / 2 > 15 percentage points -> 'imprecise'; no power promise; no post-result extension."
+  },
+  "missingnessPolicy": "manual hunks are ordered with tier 2 by tie key and counted per ordering, never an abort; absent baseline rows say 'not captured', never 0; absent cells are blank, never 0%.",
+  "stops": [
+    "Gate 1 fails -> S45 skipped in execution, failed predicate named",
+    "slicer or worksheet fails -> fix on dev only",
+    "no valid policy -> publish and stop before held-out",
+    "hash mismatch, label leak, split contamination, a required atom that is not a product atom (D34), or a baseline falsely marked measured -> abort before scoring",
+    "arm B cap reached -> stop, publish partial",
+    "any code, data or protocol change after held-out release -> held-out spent"
+  ],
+  "limits": { "maxMinutesPerRun": 15, "maxMemoryGiBPerRun": 2 },
+  "hashes": {
+    "protocolFiles": null,
+    "policy": null,
+    "implementationCommit": null,
+    "corpusCommitment": null
+  },
+  "frozenAt": null
+}

@@ -1,0 +1,26 @@
+# dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+*.log
+
+# secrets: never commit; only the example is tracked
+.env
+.env.*
+!.env.example
+
+# held-out material never enters the repo before the freeze (plan 7.5); local scratch
+results/heldout/
+results/scratch/
+scratch/
+
+# agent-only material belongs in the outer shell, never in this repo
+.chatexports/
+.agent-registry/
+.thinking/
+.agent-work/
+sealed/
+corpus-author-work/
+corpus-author-packet/

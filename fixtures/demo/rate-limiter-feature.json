@@ -1,0 +1,31 @@
+{
+  "schema": "s45.change/1",
+  "id": "demo-rate-limiter-feature",
+  "files": [
+    {
+      "path": "src/clock.ts",
+      "base": "export interface Clock {\n  now(): number;\n}\n\nexport const systemClock: Clock = { now: () => Date.now() };\n",
+      "head": "export interface Clock {\n  now(): number;\n}\n\nexport const systemClock: Clock = { now: () => Date.now() };\n"
+    },
+    {
+      "path": "src/notify.ts",
+      "base": null,
+      "head": "import { report } from './telemetry';\n\nexport function notifyRejected(key: string, rejected: number): void {\n  try {\n    report('rate_limited', { key, rejected });\n  } catch (err) {\n    console.warn('telemetry unavailable', err);\n  }\n}\n"
+    },
+    {
+      "path": "src/rate-limiter.test.ts",
+      "base": "import { describe, expect, it } from 'vitest';\nimport { RateLimiter } from './rate-limiter';\n\nconst fixedClock = { now: () => 0 };\n\ndescribe('RateLimiter', () => {\n  it('rejects calls over the limit', () => {\n    const limiter = new RateLimiter({ limit: 1, windowMs: 1000 }, fixedClock);\n    expect(limiter.allow('a')).toBe(true);\n    expect(limiter.allow('a')).toBe(false);\n  });\n});\n",
+      "head": "import { describe, expect, it } from 'vitest';\nimport { RateLimiter } from './rate-limiter';\n\nconst fixedClock = { now: () => 0 };\n\ndescribe('RateLimiter', () => {\n  it('allows a burst above the limit', () => {\n    const burstLimiter = new RateLimiter({ limit: 1, windowMs: 1000, burst: 1 }, fixedClock);\n    expect(burstLimiter.allow('b')).toBe(true);\n    expect(burstLimiter.allow('b')).toBe(true);\n    expect(burstLimiter.allow('b')).toBe(false);\n  });\n\n  it('rejects calls over the limit', () => {\n    const limiter = new RateLimiter({ limit: 1, windowMs: 1000 }, fixedClock);\n    expect(limiter.allow('a')).toBe(true);\n    expect(limiter.allow('a')).toBe(false);\n  });\n});\n"
+    },
+    {
+      "path": "src/rate-limiter.ts",
+      "base": "import { systemClock } from './clock';\nimport type { Clock } from './clock';\n\n// Fixed-window rate limiter.\nexport interface LimiterOptions {\n  limit: number;\n  windowMs: number;\n}\n\nexport class RateLimiter {\n  private readonly options: LimiterOptions;\n  private readonly clock: Clock;\n  private counts = new Map<string, number>();\n  private windowStart = 0;\n\n  constructor(options: LimiterOptions, clock: Clock = systemClock) {\n    this.options = options;\n    this.clock = clock;\n  }\n\n  allow(key: string): boolean {\n    this.roll();\n    const used = this.counts.get(key) ?? 0;\n    if (used >= this.options.limit) {\n      return false;\n    }\n    this.counts.set(key, used + 1);\n    return true;\n  }\n\n  private roll(): void {\n    const t = this.clock.now();\n    if (t - this.windowStart >= this.options.windowMs) {\n      this.windowStart = t;\n      this.counts.clear();\n    }\n  }\n}\n\nexport const DEFAULT_OPTIONS: LimiterOptions = { limit: 10, windowMs: 1000 };\n",
+      "head": "import { systemClock } from './clock';\nimport type { Clock } from './clock';\nimport { notifyRejected } from './notify';\n\n// Fixed-window rate limiter with a per-key burst allowance.\nexport interface LimiterOptions {\n  limit: number;\n  windowMs: number;\n  burst?: number;\n}\n\nexport class RateLimiter {\n  private readonly options: LimiterOptions;\n  private readonly clock: Clock;\n  private counts = new Map<string, number>();\n  private windowStart = 0;\n  private rejected = 0;\n\n  constructor(options: LimiterOptions, clock: Clock = systemClock) {\n    this.options = options;\n    this.clock = clock;\n  }\n\n  allow(key: string): boolean {\n    this.roll();\n    const used = this.counts.get(key) ?? 0;\n    const cap = this.options.limit + (this.options.burst ?? 0);\n    if (used >= cap) {\n      this.rejected += 1;\n      notifyRejected(key, this.rejected);\n      return false;\n    }\n    this.counts.set(key, used + 1);\n    return true;\n  }\n\n  private roll(): void {\n    const t = this.clock.now();\n    if (t - this.windowStart >= this.options.windowMs) {\n      this.windowStart = t;\n      this.counts.clear();\n      this.rejected = 0;\n    }\n  }\n}\n\nexport const DEFAULT_OPTIONS: LimiterOptions = { limit: 10, windowMs: 1000 };\n\nexport function retryAfterMs(elapsedMs: number, windowMs: number, used: number, cap: number): number {\n  if (used < cap) {\n    return 0;\n  }\n  if (elapsedMs >= windowMs || windowMs <= 0) {\n    return 0;\n  }\n  const remaining = windowMs - elapsedMs;\n  return used > cap * 2 ? windowMs : remaining;\n}\n"
+    },
+    {
+      "path": "src/telemetry.ts",
+      "base": "export function report(event: string, data: Record<string, unknown>): void {\n  console.log(event, JSON.stringify(data));\n}\n",
+      "head": "export function report(event: string, data: Record<string, unknown>): void {\n  console.log(event, JSON.stringify(data));\n}\n"
+    }
+  ]
+}

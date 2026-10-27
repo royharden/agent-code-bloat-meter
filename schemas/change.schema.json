@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:s45:schema:change:1",
+  "title": "ChangeV1",
+  "description": "plan 6.1 / 7.4: one change. Roles are derived from paths, never supplied. Path uniqueness, case collisions, binary content and size limits are enforced by src/core/safety.ts, not by this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "files"],
+  "properties": {
+    "schema": { "const": "s45.change/1" },
+    "id": { "type": "string", "minLength": 1, "description": "Opaque, label-neutral change id." },
+    "files": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/file" }
+    }
+  },
+  "$defs": {
+    "relativePosixPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Canonical relative POSIX path: no leading slash, drive, UNC, backslash, NUL, '.' or '..' segment, empty segment or trailing slash.",
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*\\\\)(?!.*\\u0000)(?!(?:.*/)?\\.{1,2}(?:/|$))(?!.*//)(?!.*/$).+$"
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "base", "head"],
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePosixPath" },
+        "base": { "type": ["string", "null"], "description": "Base text; null when the file is added." },
+        "head": { "type": ["string", "null"], "description": "Head text; null when the file is deleted." }
+      },
+      "anyOf": [
+        { "properties": { "base": { "type": "string" } } },
+        { "properties": { "head": { "type": "string" } } }
+      ]
+    }
+  }
+}

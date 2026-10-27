@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:s45:schema:results:1",
+  "title": "Results",
+  "description": "plan 8.7: results table data (results/results.json and the viewer's public/data/results.json). Until a real held-out attempt exists the only valid document is the not-yet-measured placeholder. Absent cells are null, never 0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "state", "header", "rows", "perFamily", "wholeHunk", "armB", "namedFailures"],
+  "properties": {
+    "schema": { "const": "s45.results/1" },
+    "state": { "enum": ["not-yet-measured", "measured"] },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["corpusCommitment", "policyHash", "preregistrationHash", "implementationCommit", "attemptId"],
+      "properties": {
+        "corpusCommitment": { "$ref": "#/$defs/nullableSha256" },
+        "policyHash": { "$ref": "#/$defs/nullableSha256" },
+        "preregistrationHash": { "$ref": "#/$defs/nullableSha256" },
+        "implementationCommit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+        "attemptId": { "type": ["string", "null"], "minLength": 1 },
+        "primarySizeComparator": { "enum": ["size-desc", "size-asc", null] },
+        "verdict": {
+          "enum": ["supported", "inconclusive", "not supported", "undefined", null],
+          "description": "Primary hypothesis read only from the 95% interval of the paired difference at 20%."
+        },
+        "precision": { "enum": ["precise", "imprecise", null] }
+      }
+    },
+    "rows": { "type": "array", "items": { "$ref": "#/$defs/row" } },
+    "perFamily": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordering", "family", "defects", "recall20"],
+        "properties": {
+          "ordering": { "$ref": "#/$defs/ordering" },
+          "family": { "$ref": "#/$defs/family" },
+          "defects": { "type": ["integer", "null"], "minimum": 0 },
+          "recall20": { "$ref": "#/$defs/proportion" },
+          "recall20CI": { "$ref": "#/$defs/interval" }
+        }
+      }
+    },
+    "wholeHunk": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordering", "recall10", "recall20", "recall30"],
+        "properties": {
+          "ordering": { "$ref": "#/$defs/ordering" },
+          "recall10": { "$ref": "#/$defs/proportion" },
+          "recall20": { "$ref": "#/$defs/proportion" },
+          "recall30": { "$ref": "#/$defs/proportion" }
+        }
+      }
+    },
+    "armB": {
+      "oneOf": [
+        { "const": "arm B not run" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "rows"],
+          "properties": {
+            "status": { "$ref": "#/$defs/status" },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["ordering", "status", "localizationHits", "duplicates", "unmatched", "providerRequests", "spentUsd"],
+                "properties": {
+                  "ordering": { "$ref": "#/$defs/ordering" },
+                  "status": { "$ref": "#/$defs/status" },
+                  "localizationHits": { "type": ["integer", "null"], "minimum": 0 },
+                  "duplicates": { "type": ["integer", "null"], "minimum": 0 },
+                  "unmatched": { "type": ["integer", "null"], "minimum": 0 },
+                  "providerRequests": { "type": ["integer", "null"], "minimum": 0 },
+                  "spentUsd": { "type": ["number", "null"], "minimum": 0 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "namedFailures": {
+      "type": "array",
+      "description": "plan 8.11: published even at zero (count 0 is a real measured count; null = not measured).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "count"],
+        "properties": {
+          "id": {
+            "enum": [
+              "boundary-flip-no-signal",
+              "await-removed-no-signal",
+              "inverted-logic-no-signal",
+              "tiny-wrong-constant",
+              "defect-in-complex-function-no-growth",
+              "guard-deletion-lowers-complexity",
+              "N1-entry-guard",
+              "N2-best-effort-catch",
+              "N3-default-throw",
+              "N4-duplicated-validators",
+              "N5-complex-correct",
+              "N6-large-refactor-size-desc",
+              "N7-unchanged-test-covers",
+              "N8-parse-then-validate",
+              "test-reference-without-assertion",
+              "tsx-render-branch",
+              "test-only-behavior-change",
+              "partial-hunk-at-budget",
+              "deletion-required-atoms",
+              "parse-or-function-map-unknown",
+              "clone-normalization-collision"
+            ]
+          },
+          "count": { "type": ["integer", "null"], "minimum": 0 },
+          "items": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "not-yet-measured" } }, "required": ["state"] },
+      "then": {
+        "properties": {
+          "rows": {
+            "items": {
+              "properties": {
+                "status": { "enum": ["not run", "not captured"] },
+                "recall10": { "type": "null" },
+                "recall20": { "type": "null" },
+                "recall30": { "type": "null" },
+                "delta20": { "type": "null" }
+              }
+            }
+          },
+          "perFamily": { "maxItems": 0 },
+          "wholeHunk": { "maxItems": 0 },
+          "armB": { "const": "arm B not run" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nullableSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "proportion": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "difference": { "type": ["number", "null"], "minimum": -1, "maximum": 1 },
+    "interval": {
+      "oneOf": [
+        { "type": "null" },
+        { "const": "undefined" },
+        {
+          "type": "array",
+          "prefixItems": [
+            { "type": "number", "minimum": -1, "maximum": 1 },
+            { "type": "number", "minimum": -1, "maximum": 1 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      ]
+    },
+    "status": { "enum": ["not run", "not captured", "invalid capture", "measured", "mock: not measurement"] },
+    "ordering": {
+      "enum": [
+        "tier-policy",
+        "size-desc",
+        "size-asc",
+        "file-type",
+        "complexity-only",
+        "clone-first",
+        "random",
+        "jscpd",
+        "sarif:fallow",
+        "lizard",
+        "label-oracle",
+        "full-review"
+      ]
+    },
+    "family": {
+      "enum": [
+        "boundary",
+        "null_optional",
+        "await_ordering",
+        "authz_weakened",
+        "validation_escaping",
+        "error_swallowed_mismapped",
+        "state_cache_lifecycle",
+        "logic_value"
+      ]
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordering",
+        "status",
+        "roots",
+        "defects",
+        "recall10",
+        "recall20",
+        "recall20CI",
+        "recall30",
+        "delta20",
+        "delta20CI",
+        "tier2ShareAll",
+        "tier2ShareClean",
+        "nearMissesFlagged",
+        "manualHunks",
+        "partialHunks",
+        "providerRequests",
+        "spentUsd"
+      ],
+      "properties": {
+        "ordering": { "$ref": "#/$defs/ordering" },
+        "status": { "$ref": "#/$defs/status" },
+        "statusNote": {
+          "type": "string",
+          "description": "e.g. 'licence unresolved' for lizard, 'upper bound, uses labels' for label-oracle, 'ceiling, sanity only' for full-review."
+        },
+        "roots": { "type": ["integer", "null"], "minimum": 0 },
+        "defects": { "type": ["integer", "null"], "minimum": 0 },
+        "recall10": { "$ref": "#/$defs/proportion" },
+        "recall20": { "$ref": "#/$defs/proportion" },
+        "recall20CI": { "$ref": "#/$defs/interval" },
+        "recall30": { "$ref": "#/$defs/proportion" },
+        "delta20": { "$ref": "#/$defs/difference" },
+        "delta20CI": { "$ref": "#/$defs/interval" },
+        "tier2ShareAll": { "$ref": "#/$defs/proportion" },
+        "tier2ShareClean": { "$ref": "#/$defs/proportion" },
+        "nearMissesFlagged": { "type": ["integer", "null"], "minimum": 0 },
+        "manualHunks": { "type": ["integer", "null"], "minimum": 0 },
+        "partialHunks": { "type": ["integer", "null"], "minimum": 0 },
+        "providerRequests": { "type": ["integer", "null"], "minimum": 0 },
+        "spentUsd": { "type": ["number", "null"], "minimum": 0 }
+      }
+    }
+  }
+}

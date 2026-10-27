@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:s45:schema:placement:1",
+  "title": "PlacementRecordV1",
+  "description": "plan 7.2 step 4 / 7.4: seeded defect placement for one split. Quota is exactly 5 defect heads per family per split (D8); feasibility and the reserved base-deletion slot are checked by the corpus author's harness and Gate 1, not by this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "split", "placementSeed", "siteInventoryHash", "quota", "assignments", "rejected"],
+  "properties": {
+    "schema": { "const": "s45.placement/1" },
+    "split": { "enum": ["dev", "heldout"] },
+    "placementSeed": { "const": 450045 },
+    "siteInventoryHash": { "$ref": "#/$defs/sha256" },
+    "quota": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "boundary",
+        "null_optional",
+        "await_ordering",
+        "authz_weakened",
+        "validation_escaping",
+        "error_swallowed_mismapped",
+        "state_cache_lifecycle",
+        "logic_value"
+      ],
+      "properties": {
+        "boundary": { "$ref": "#/$defs/count" },
+        "null_optional": { "$ref": "#/$defs/count" },
+        "await_ordering": { "$ref": "#/$defs/count" },
+        "authz_weakened": { "$ref": "#/$defs/count" },
+        "validation_escaping": { "$ref": "#/$defs/count" },
+        "error_swallowed_mismapped": { "$ref": "#/$defs/count" },
+        "state_cache_lifecycle": { "$ref": "#/$defs/count" },
+        "logic_value": { "$ref": "#/$defs/count" }
+      }
+    },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rootId",
+          "cleanChangeId",
+          "slot",
+          "family",
+          "candidateSiteIds",
+          "chosenIndex",
+          "siteId",
+          "defectChangeId"
+        ],
+        "properties": {
+          "rootId": { "type": "string", "minLength": 1 },
+          "cleanChangeId": { "type": "string", "minLength": 1 },
+          "slot": { "enum": [1, 2] },
+          "family": { "$ref": "#/$defs/family" },
+          "candidateSiteIds": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "chosenIndex": { "type": "integer", "minimum": 0 },
+          "siteId": { "type": "string", "minLength": 1 },
+          "defectChangeId": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["siteId", "reason"],
+        "properties": {
+          "siteId": { "type": "string", "minLength": 1 },
+          "reason": { "enum": ["equivalent", "unwitnessed", "empties_hunk", "infeasible"] },
+          "receipt": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "family": {
+      "enum": [
+        "boundary",
+        "null_optional",
+        "await_ordering",
+        "authz_weakened",
+        "validation_escaping",
+        "error_swallowed_mismapped",
+        "state_cache_lifecycle",
+        "logic_value"
+      ]
+    }
+  }
+}

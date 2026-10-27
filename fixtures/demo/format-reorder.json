@@ -1,0 +1,11 @@
+{
+  "schema": "s45.change/1",
+  "id": "demo-format-reorder",
+  "files": [
+    {
+      "path": "src/format.ts",
+      "base": "import { clamp } from './math';\nimport { padStart } from './pad';\nimport type { Row } from './types';\n\nexport function cell(value: string, width: number): string {\n  return padStart(value, clamp(width, 1, 40));\n}\n\nexport function formatRow(row: Row, widths: number[]): string {\n  const parts: string[] = [];\n  let total = 0;\n  for (const [i, value] of row.values.entries()) {\n    const width = widths[i] ?? 8;\n    const text = cell(value, width);\n    parts.push(text);\n    total += text.length;\n  }\n  const sep = row.dense ? '|' : ' | ';\n  const line = parts.join(sep);\n  total += sep.length * (parts.length - 1);\n  console.debug('row width', total);\n  return line;\n}\n",
+      "head": "import { padStart } from './pad';\nimport type { Row } from './types';\nimport { clamp } from './math';\n\nexport function cell(value: string, width: number): string {\n  return padStart(value,\n    clamp(width, 1, 40));\n}\n\nexport function formatRow(row: Row, widths: number[]): string {\n  const parts: string[] = [];\n  let total = 0;\n  for (const [i, value] of row.values.entries()) {\n    const width = widths[i] ?? 12;\n    const text = cell(value, width);\n    parts.push(text);\n    total += text.length;\n  }\n  const sep = row.dense ? '|' : ' | ';\n  const line = parts.join(sep);\n  total += sep.length * (parts.length - 1);\n  console.debug('row width', total);\n  return line;\n}\n"
+    }
+  ]
+}

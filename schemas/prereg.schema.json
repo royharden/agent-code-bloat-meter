@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:s45:schema:prereg:1",
+  "title": "Preregistration",
+  "description": "plan 8.1-8.5 / 8.10: the preregistered protocol. Tuned values, comparator and hashes are null until scripts/freeze.ts writes them; a frozen preregistration must have every one of them set.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "planRevision",
+    "claim",
+    "corpus",
+    "unit",
+    "primaryEndpoint",
+    "secondaryEndpoints",
+    "policy",
+    "comparator",
+    "baselines",
+    "seeds",
+    "prng",
+    "bootstrap",
+    "singleProportionInterval",
+    "precisionRule",
+    "missingnessPolicy",
+    "stops",
+    "limits",
+    "hashes",
+    "frozenAt"
+  ],
+  "properties": {
+    "schema": { "const": "s45.prereg/1" },
+    "status": { "enum": ["draft-unfrozen", "frozen"] },
+    "planRevision": { "type": "string", "minLength": 1 },
+    "claim": { "type": "string", "minLength": 1 },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "rootsPerSplit",
+        "changesPerSplit",
+        "defectsPerSplit",
+        "defectsPerFamilyPerSplit",
+        "commitmentHash",
+        "manifestHash"
+      ],
+      "properties": {
+        "source": { "const": "s45-own" },
+        "rootsPerSplit": { "const": 20 },
+        "changesPerSplit": { "const": 80 },
+        "defectsPerSplit": { "const": 40 },
+        "defectsPerFamilyPerSplit": { "const": 5 },
+        "commitmentHash": { "$ref": "#/$defs/nullableSha256" },
+        "manifestHash": { "$ref": "#/$defs/nullableSha256" }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["budgetUnit", "budgetsPercent", "primaryBudgetPercent", "budgetRule", "exposed"],
+      "properties": {
+        "budgetUnit": { "type": "string" },
+        "budgetsPercent": { "const": [10, 20, 30] },
+        "primaryBudgetPercent": { "const": 20 },
+        "budgetRule": { "type": "string" },
+        "exposed": { "type": "string" }
+      }
+    },
+    "primaryEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "metric", "split", "hypothesis", "decisionRule"],
+      "properties": {
+        "name": { "const": "defect exposure recall" },
+        "metric": { "type": "string" },
+        "split": { "const": "heldout" },
+        "hypothesis": { "type": "string" },
+        "decisionRule": { "type": "string" }
+      }
+    },
+    "secondaryEndpoints": { "type": "array", "items": { "type": "string" } },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidates", "selectedCandidateId", "T", "N", "selectionRule", "degenerateGuard"],
+      "properties": {
+        "candidates": { "const": ["T2-N8", "T2-N12", "T4-N8", "T4-N12", "T6-N8", "T6-N12"] },
+        "selectedCandidateId": { "type": ["string", "null"], "pattern": "^T[246]-N(8|12)$" },
+        "T": { "enum": [2, 4, 6, null] },
+        "N": { "enum": [8, 12, null] },
+        "selectionRule": { "type": "string" },
+        "degenerateGuard": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxTier2ShareAllDevAtoms", "maxTier2ShareCleanDevAtoms"],
+          "properties": {
+            "maxTier2ShareAllDevAtoms": { "const": 0.4 },
+            "maxTier2ShareCleanDevAtoms": { "const": 0.25 }
+          }
+        }
+      }
+    },
+    "comparator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primarySizeComparator", "rule"],
+      "properties": {
+        "primarySizeComparator": { "enum": ["size-desc", "size-asc", null] },
+        "rule": { "type": "string" }
+      }
+    },
+    "baselines": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "size-desc",
+          "size-asc",
+          "file-type",
+          "complexity-only",
+          "clone-first",
+          "random",
+          "jscpd",
+          "sarif:fallow",
+          "lizard",
+          "label-oracle",
+          "full-review"
+        ]
+      }
+    },
+    "seeds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["split", "placement", "bootstrap", "randomBaseline"],
+      "properties": {
+        "split": { "const": 45 },
+        "placement": { "const": 450045 },
+        "bootstrap": { "const": 45 },
+        "randomBaseline": { "const": { "first": 4500, "last": 4599 } }
+      }
+    },
+    "prng": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generator", "index", "shuffle", "randomBaselineChangeSeed"],
+      "properties": {
+        "generator": { "type": "string" },
+        "index": { "type": "string" },
+        "shuffle": { "type": "string" },
+        "randomBaselineChangeSeed": { "type": "string" }
+      }
+    },
+    "bootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "resamples",
+        "seed",
+        "unit",
+        "quantiles",
+        "quantileType",
+        "microRecallPerDraw",
+        "undefinedDrawLimit",
+        "undefinedRule"
+      ],
+      "properties": {
+        "method": { "const": "percentile" },
+        "resamples": { "const": 10000 },
+        "seed": { "const": 45 },
+        "unit": { "type": "string" },
+        "quantiles": { "const": [0.025, 0.975] },
+        "quantileType": { "const": 7 },
+        "microRecallPerDraw": { "type": "string" },
+        "undefinedDrawLimit": { "const": 0.1 },
+        "undefinedRule": { "type": "string" }
+      }
+    },
+    "singleProportionInterval": { "const": "Wilson 95%" },
+    "precisionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["halfWidthPercentagePointsImpreciseAbove", "text"],
+      "properties": {
+        "halfWidthPercentagePointsImpreciseAbove": { "const": 15 },
+        "text": { "type": "string" }
+      }
+    },
+    "missingnessPolicy": { "type": "string" },
+    "stops": { "type": "array", "items": { "type": "string" } },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxMinutesPerRun", "maxMemoryGiBPerRun"],
+      "properties": {
+        "maxMinutesPerRun": { "const": 15 },
+        "maxMemoryGiBPerRun": { "const": 2 }
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocolFiles", "policy", "implementationCommit", "corpusCommitment"],
+      "properties": {
+        "protocolFiles": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "minProperties": 1,
+              "description": "repo-relative path -> sha256 of the file bytes, as written by scripts/hash-protocol.ts",
+              "additionalProperties": { "$ref": "#/$defs/sha256" }
+            }
+          ]
+        },
+        "policy": { "$ref": "#/$defs/nullableSha256" },
+        "implementationCommit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" },
+        "corpusCommitment": { "$ref": "#/$defs/nullableSha256" }
+      }
+    },
+    "frozenAt": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "frozen" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "frozenAt": { "type": "string" },
+          "policy": {
+            "properties": {
+              "selectedCandidateId": { "type": "string" },
+              "T": { "type": "integer" },
+              "N": { "type": "integer" }
+            }
+          },
+          "comparator": { "properties": { "primarySizeComparator": { "type": "string" } } },
+          "corpus": {
+            "properties": { "commitmentHash": { "type": "string" }, "manifestHash": { "type": "string" } }
+          },
+          "hashes": {
+            "properties": {
+              "protocolFiles": { "type": "object" },
+              "policy": { "type": "string" },
+              "implementationCommit": { "type": "string" },
+              "corpusCommitment": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nullableSha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
+  }
+}

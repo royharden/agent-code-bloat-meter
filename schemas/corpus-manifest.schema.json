@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:s45:schema:corpus-manifest:1",
+  "title": "CorpusManifestV1",
+  "description": "plan 7.4: corpus edition manifest. Counts, split overlap, commitment hashes and author/builder session separation are Gate 1 predicates (plan 7.3) checked in code, not by this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "source",
+    "edition",
+    "authorSession",
+    "authorHarness",
+    "authorModel",
+    "custodianSession",
+    "licence",
+    "recipeHash",
+    "familyListHash",
+    "siteInventoryHash",
+    "splitSeed",
+    "placementSeed",
+    "roots",
+    "changes",
+    "files"
+  ],
+  "properties": {
+    "schema": { "const": "s45.corpus/1" },
+    "source": { "enum": ["s45-own", "s41-adapter"] },
+    "edition": { "type": "string", "minLength": 1 },
+    "authorSession": { "type": "string", "minLength": 1 },
+    "authorHarness": { "type": "string", "minLength": 1 },
+    "authorModel": { "type": "string", "minLength": 1 },
+    "custodianSession": { "type": "string", "minLength": 1 },
+    "licence": { "const": "MIT" },
+    "recipeHash": { "$ref": "#/$defs/sha256" },
+    "familyListHash": { "$ref": "#/$defs/sha256" },
+    "siteInventoryHash": { "$ref": "#/$defs/sha256" },
+    "splitSeed": { "const": 45 },
+    "placementSeed": { "const": 450045 },
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "split", "tsx"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "split": { "enum": ["dev", "heldout"] },
+          "tsx": { "type": "boolean" }
+        }
+      }
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "rootId", "inputHash", "labelHash"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "rootId": { "type": "string", "minLength": 1 },
+          "inputHash": { "$ref": "#/$defs/sha256" },
+          "labelHash": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "description": "path -> sha256 of the file bytes",
+      "additionalProperties": { "$ref": "#/$defs/sha256" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

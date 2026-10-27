@@ -1,0 +1,11 @@
+{
+  "schema": "s45.change/1",
+  "id": "demo-badge-tsx",
+  "files": [
+    {
+      "path": "src/Badge.tsx",
+      "base": "import type { ReactNode } from 'react';\n\nexport interface BadgeProps {\n  label: string;\n  count?: number;\n  icon?: ReactNode;\n}\n\nexport function Badge({ label, count, icon }: BadgeProps) {\n  const shown = count ?? 0;\n  console.log('render badge', label);\n  return (\n    <span className=\"badge\">\n      {icon}\n      {label}\n      {shown > 0 && <b>{shown}</b>}\n    </span>\n  );\n}\n\nexport const badgeTitle = (label: string): string => label.toUpperCase();\n",
+      "head": "import type { ReactNode } from 'react';\n\nexport interface BadgeProps {\n  label: string;\n  count?: number;\n  icon?: ReactNode;\n}\n\nexport function Badge({ label, count, icon }: BadgeProps) {\n  const shown = count ?? 0;\n  return (\n    <span className=\"badge\">\n      {icon ?? <i className=\"dot\" />}\n      {label || 'untitled'}\n      {shown > 0 && <b>{shown > 99 ? '99+' : shown}</b>}\n      {shown < 0 ? <em>invalid</em> : null}\n    </span>\n  );\n}\n"
+    }
+  ]
+}

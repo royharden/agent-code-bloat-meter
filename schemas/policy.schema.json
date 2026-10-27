@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:s45:schema:policy:1",
+  "title": "Tier policy",
+  "description": "plan 8.2 / 8.3 / D10 / D11 / D19: the declared tier-policy candidate space and, after dev tuning, the selected candidate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "planRevision",
+    "ruleVersion",
+    "status",
+    "searchSpace",
+    "candidates",
+    "rules",
+    "tierAssignment",
+    "readingOrder",
+    "tieKey",
+    "selection",
+    "selected"
+  ],
+  "properties": {
+    "schema": { "const": "s45.policy/1" },
+    "version": { "type": "string", "minLength": 1 },
+    "planRevision": { "type": "string", "minLength": 1 },
+    "ruleVersion": { "const": "m1" },
+    "status": { "enum": ["candidate-space-unselected", "selected", "no-valid-policy"] },
+    "searchSpace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["T", "N", "cloneRule"],
+      "properties": {
+        "T": { "const": [2, 4, 6] },
+        "N": { "const": [8, 12] },
+        "cloneRule": { "const": false },
+        "note": { "type": "string" }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier2", "tier0", "manual"],
+      "properties": {
+        "tier2": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/rule" } },
+        "tier0": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/rule" } },
+        "manual": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/rule" } }
+      }
+    },
+    "tierAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["precedence", "text"],
+      "properties": {
+        "precedence": { "const": ["manual", "tier2", "tier0", "tier1"] },
+        "text": { "type": "string" }
+      }
+    },
+    "readingOrder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["groups", "withinGroup", "text"],
+      "properties": {
+        "groups": { "const": [["tier2", "manual"], ["tier1"], ["tier0"]] },
+        "withinGroup": { "const": "tieKey" },
+        "text": { "type": "string" }
+      }
+    },
+    "tieKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "algorithm", "input", "output", "order"],
+      "properties": {
+        "id": { "const": "s45-tie-v1" },
+        "algorithm": { "const": "sha256" },
+        "input": { "const": "s45-tie-v1|{changeId}|{hunkId}" },
+        "output": { "const": "lowercase hex" },
+        "order": { "const": "ascending" }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["split", "budgetPercent", "objective", "guards", "tieBreak", "noValidCandidate"],
+      "properties": {
+        "split": { "const": "dev" },
+        "budgetPercent": { "const": 20 },
+        "objective": { "type": "string" },
+        "guards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text", "max"],
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "max": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "tieBreak": { "type": "array", "items": { "type": "string" } },
+        "noValidCandidate": { "type": "string" }
+      }
+    },
+    "selected": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidateId", "T", "N", "selectedAt", "devRecall20", "devTier2ShareAll", "devTier2ShareClean"],
+          "properties": {
+            "candidateId": { "type": "string" },
+            "T": { "enum": [2, 4, 6] },
+            "N": { "enum": [8, 12] },
+            "selectedAt": { "type": "string", "format": "date-time" },
+            "devRecall20": { "type": "number", "minimum": 0, "maximum": 1 },
+            "devTier2ShareAll": { "type": "number", "minimum": 0, "maximum": 1 },
+            "devTier2ShareClean": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "selected" } }, "required": ["status"] },
+      "then": { "properties": { "selected": { "type": "object" } } },
+      "else": { "properties": { "selected": { "type": "null" } } }
+    }
+  ],
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "T", "N"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^T[246]-N(8|12)$" },
+        "T": { "enum": [2, 4, 6] },
+        "N": { "enum": [8, 12] }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

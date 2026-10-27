@@ -1,0 +1,42 @@
+{
+  "name": "agent-diff-review-tiers",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Diff Review Tiers: a preregistered study of structural risk-tier ordering for agent-written TypeScript diffs. Nothing measured yet.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "analyze": "tsx cli/analyze.ts",
+    "demo": "tsx scripts/demo.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "tune": "tsx scripts/tune.ts",
+    "freeze": "tsx scripts/freeze.ts",
+    "eval": "tsx scripts/eval.ts",
+    "hash-protocol": "tsx scripts/hash-protocol.ts"
+  },
+  "dependencies": {
+    "diff": "7.0.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "@types/diff": "7.0.2",
+    "@types/node": "20.19.1",
+    "@types/react": "18.3.23",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.5.2",
+    "eslint": "9.29.0",
+    "jscpd": "4.3.0",
+    "tsx": "4.20.3",
+    "vite": "6.3.5",
+    "vitest": "3.2.4"
+  }
+}
