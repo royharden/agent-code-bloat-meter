@@ -24,8 +24,8 @@ function statementListOf(node: ts.Node): readonly ts.Statement[] | null {
 
 /**
  * Head-side unreachable statements: in each statement list (source file, block, module block, case/default clause),
- * every non-exempt statement that follows the list's first `return` or `throw`. Every statement after the first one
- * is counted (a run after an unconditional exit is unreachable as a whole, not only its first statement).
+ * a non-exempt statement immediately following a `return` or `throw`. Exempt declarations/empty statements are
+ * still list entries: they do not carry adjacency across to a later statement.
  */
 export function findUnreachableStatements(sourceFile: ts.SourceFile, path: string): Span[] {
   const spans: Span[] = [];
@@ -34,10 +34,10 @@ export function findUnreachableStatements(sourceFile: ts.SourceFile, path: strin
     const node = stack.pop() as ts.Node;
     const list = statementListOf(node);
     if (list !== null) {
-      let exited = false;
+      let previousExited = false;
       for (const statement of list) {
-        if (exited && !isExempt(statement)) spans.push(nodeSpan(statement, sourceFile, path, 'head'));
-        if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement)) exited = true;
+        if (previousExited && !isExempt(statement)) spans.push(nodeSpan(statement, sourceFile, path, 'head'));
+        previousExited = ts.isReturnStatement(statement) || ts.isThrowStatement(statement);
       }
     }
     ts.forEachChild(node, (child) => {

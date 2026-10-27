@@ -3,7 +3,7 @@
 // and `-c core.hooksPath=/dev/null -c diff.external= -c core.fsmonitor=false`. Refs are resolved to full commit ids
 // once; trees are listed with `ls-tree -r -z -l --full-tree`; blobs are read with `cat-file blob <oid>` only after
 // the size caps pass. Never checkout, reset, worktree, textconv or external diff. Symlinks (120000) and submodules
-// (160000) are rejected when they are changed or carry a `.ts` / `.tsx` path.
+// (160000) are rejected in either enumerated tree, including unchanged unsupported paths.
 import { execFile } from 'node:child_process';
 import { sourceKindOf } from './change';
 import { ChangeRejectedError, decodeUtf8Strict, LIMITS, makeIssue } from './safety';
@@ -179,7 +179,7 @@ export async function readGitChange(
     const changed = base?.oid !== head?.oid || base?.mode !== head?.mode;
     const supported = sourceKindOf(path) !== null;
     for (const entry of [base, head]) {
-      if (entry === null || !(changed || supported)) continue;
+      if (entry === null) continue;
       if (entry.mode === SYMLINK_MODE) rejections.push(makeIssue('git_symlink', 'symbolic link', path));
       if (entry.mode === GITLINK_MODE) rejections.push(makeIssue('git_submodule', 'submodule (gitlink)', path));
     }

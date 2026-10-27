@@ -100,14 +100,15 @@ const MOD_2 = 998_244_353;
 
 /**
  * Finds clone pairs across the given head files. Algorithm (deterministic): hash every 40-token window that stays
- * inside one file; group equal windows (verified token by token); for each window position q in ascending order,
- * pair it with the nearest earlier equal window p that does not overlap it, extend the pair left and right to
- * maximal length, truncate so the two occurrences do not overlap, and keep the pair when both occurrences span at
- * least 3 lines. A window starting inside the later occurrence of the previous pair on the same diagonal is skipped.
- * Only the nearest earlier partner is tried, so a window whose nearest pair spans fewer than 3 lines is not retried
- * with a farther partner (implementation bound, disclosed in docs/DEFERRED-VALIDATION.md DV-M3-08).
+ * inside one file; group equal windows (verified token by token); visit every earlier non-overlapping partner.
+ * Each file-pair/offset diagonal's equal run is extended once. Across files the full run is maximal; within one
+ * file a run longer than the separation yields every separation-length slice (each is maximal under the
+ * non-overlap constraint). Line thresholds are applied to each resulting pair, never used to prune a partner.
+ * Canonical file/pair ordering makes results independent of input permutation. Partner enumeration can be
+ * quadratic, and repetitive inputs can also have quadratically many genuine pairs; performance remains deferred.
  */
 export function findClonePairs(files: readonly { path: string; tokens: readonly CloneToken[] }[]): ClonePair[] {
+  files = [...files].sort((a, b) => compareText(a.path, b.path));
   const ids: number[] = [];
   const fileOf: number[] = [];
   const fileStart: number[] = [];
@@ -165,56 +166,57 @@ export function findClonePairs(files: readonly { path: string; tokens: readonly 
   }
 
   const overlaps = (p: number, q: number, len: number): boolean => fileOf[p] === fileOf[q] && Math.abs(q - p) < len;
-  const pairs: ClonePair[] = [];
-  const diagonalEnd = new Map<number, number>();
+  const pairs = new Map<string, ClonePair>();
+  const diagonalEnd = new Map<string, number>();
   const positions = [...classOf.keys()].sort((a, b) => a - b);
   for (const q of positions) {
     const cls = classOf.get(q) as number[];
-    let p = -1;
     for (let i = cls.indexOf(q) - 1; i >= 0; i--) {
-      const candidate = cls[i] as number;
-      if (!overlaps(candidate, q, W)) {
-        p = candidate;
-        break;
+      const p = cls[i] as number;
+      if (overlaps(p, q, W)) continue;
+      const diagonal = `${fileOf[p]}:${fileOf[q]}:${q - p}`;
+      if (q < (diagonalEnd.get(diagonal) ?? -1)) continue;
+      let a = p;
+      let b = q;
+      while (
+        a > (fileStart[fileOf[a] as number] as number) &&
+        b > (fileStart[fileOf[b] as number] as number) &&
+        ids[a - 1] === ids[b - 1]
+      ) {
+        a--;
+        b--;
+      }
+      let runLength = q - b + W;
+      const aEnd = fileEnd[fileOf[a] as number] as number;
+      const bEnd = fileEnd[fileOf[b] as number] as number;
+      while (a + runLength < aEnd && b + runLength < bEnd && ids[a + runLength] === ids[b + runLength]) runLength++;
+      diagonalEnd.set(diagonal, b + runLength);
+      const len = fileOf[a] === fileOf[b] ? Math.min(runLength, b - a) : runLength;
+      const lastOffset = runLength - len;
+      const occ = (start: number): CloneOccurrence => ({
+        path: (files[fileOf[start] as number] as { path: string }).path,
+        startLine: tokenAt(start).startLine,
+        endLine: tokenAt(start + len - 1).endLine,
+      });
+      for (let offset = 0; offset <= lastOffset; offset++) {
+        const occA = occ(a + offset);
+        const occB = occ(b + offset);
+        if (occA.endLine - occA.startLine + 1 < CLONE_MIN_LINES) continue;
+        if (occB.endLine - occB.startLine + 1 < CLONE_MIN_LINES) continue;
+        const pair = { a: occA, b: occB, tokens: len };
+        pairs.set(JSON.stringify(pair), pair);
       }
     }
-    if (p < 0) continue;
-    const diagonal = q - p;
-    // The later occurrence of the last pair on this diagonal ends at `previousEnd`; windows starting before it are
-    // already inside that occurrence, and the left extension never reaches back into it (this keeps periodic
-    // repeats X X X as the pairs (1, 2) and (2, 3) instead of re-deriving (1, 2)).
-    const previousEnd = diagonalEnd.get(diagonal) ?? -1;
-    if (q < previousEnd) continue;
-    let a = p;
-    let b = q;
-    while (
-      a > (fileStart[fileOf[a] as number] as number) &&
-      b > Math.max(fileStart[fileOf[b] as number] as number, previousEnd) &&
-      ids[a - 1] === ids[b - 1]
-    ) {
-      a--;
-      b--;
-    }
-    let len = q - b + W;
-    const aEnd = fileEnd[fileOf[a] as number] as number;
-    const bEnd = fileEnd[fileOf[b] as number] as number;
-    while (a + len < aEnd && b + len < bEnd && ids[a + len] === ids[b + len]) len++;
-    // Same file: the two occurrences must not overlap (b - a = q - p >= W, so len stays >= W).
-    if (fileOf[a] === fileOf[b] && a + len > b) len = b - a;
-    diagonalEnd.set(diagonal, b + len);
-    if (len < W) continue;
-    const occ = (start: number): CloneOccurrence => ({
-      path: (files[fileOf[start] as number] as { path: string }).path,
-      startLine: tokenAt(start).startLine,
-      endLine: tokenAt(start + len - 1).endLine,
-    });
-    const occA = occ(a);
-    const occB = occ(b);
-    if (occA.endLine - occA.startLine + 1 < CLONE_MIN_LINES) continue;
-    if (occB.endLine - occB.startLine + 1 < CLONE_MIN_LINES) continue;
-    pairs.push({ a: occA, b: occB, tokens: len });
   }
-  return pairs;
+  return [...pairs.values()].sort((a, b) => compareOccurrence(a.a, b.a) || compareOccurrence(a.b, b.b) || a.tokens - b.tokens);
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function compareOccurrence(a: CloneOccurrence, b: CloneOccurrence): number {
+  return compareText(a.path, b.path) || a.startLine - b.startLine || a.endLine - b.endLine;
 }
 
 /** Per-hunk clone value: head atoms on lines covered by an occurrence, and the other occurrences (origins). */
@@ -243,5 +245,5 @@ export function cloneHitsForHunk(
     consider(pair.a, pair.b);
     consider(pair.b, pair.a);
   }
-  return { duplicatedAddedAtoms: covered.size, origins: [...origins.values()] };
+  return { duplicatedAddedAtoms: covered.size, origins: [...origins.values()].sort(compareOccurrence) };
 }

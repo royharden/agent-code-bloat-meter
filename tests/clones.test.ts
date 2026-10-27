@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { normaliseText } from '../src/core/change';
 import { parseSide } from '../src/core/parse';
 import type { ChangeV1 } from '../src/core/types';
-import { CLONE_MIN_TOKENS, findClonePairs, leafTokens } from '../src/diffmetrics/clones';
+import { CLONE_MIN_TOKENS, cloneHitsForHunk, findClonePairs, leafTokens } from '../src/diffmetrics/clones';
 import { analyze } from '../src/diffmetrics/index';
 
 /** A 5-line function body of well over 40 normalised tokens. */
@@ -52,15 +52,51 @@ describe('clone pairs', () => {
     ).toEqual([]);
   });
 
-  it('occurrences within one file never overlap', () => {
+  it('occurrences within one file never overlap in tokens, including periodic runs', () => {
+    // One token per line exposes token offsets in the public spans. Real non-overlapping token occurrences may
+    // share a boundary source line, so line-disjointness is not a valid assertion for arbitrary formatting.
+    const sequence = Array.from({ length: 120 }, (_, i) => ({ id: i % 40, startLine: i + 1, endLine: i + 1 }));
+    const pairs = findClonePairs([{ path: 'a.ts', tokens: sequence }]);
+    expect(pairs.length).toBeGreaterThan(0);
+    for (const p of pairs) expect(p.a.endLine < p.b.startLine).toBe(true);
+    expect(pairs.some((p) => p.a.startLine === 41 && p.b.startLine === 81)).toBe(true);
+  });
+
+  it('retains coverage of every repeated copy', () => {
     const text = `${body('p', 'xs', 'k')}\n${body('q', 'ys', 'm')}\n${body('r', 'zs', 'n')}\n`;
     const pairs = findClonePairs([{ path: 'a.ts', tokens: tokens(text) }]);
     expect(pairs.length).toBeGreaterThan(0);
-    for (const p of pairs) expect(p.a.endLine < p.b.startLine || p.b.endLine < p.a.startLine).toBe(true);
     // Periodic repeats: the third copy (lines 13-18) is covered too, not only the first pair.
     const covered = new Set<number>();
     for (const p of pairs) for (const o of [p.a, p.b]) for (let l = o.startLine; l <= o.endLine; l++) covered.add(l);
     for (let line = 1; line <= 18; line++) expect(covered.has(line)).toBe(true);
+  });
+
+  it('tries the multiline partner beyond a nearer one-line copy, invariant under every file permutation', () => {
+    const files = [
+      { path: 'src/a.ts', tokens: tokens(body('first', 'xs', 'limit')) },
+      { path: 'src/b.ts', tokens: tokens(body('second', 'items', 'cap').replace(/\n/g, ' ')) },
+      { path: 'src/c.ts', tokens: tokens(body('third', 'values', 'ceiling')) },
+    ];
+    const expected = [{ a: { path: 'src/a.ts', startLine: 1, endLine: 6 }, b: { path: 'src/c.ts', startLine: 1, endLine: 6 }, tokens: files[0]!.tokens.length }];
+    for (const order of [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]) {
+      const pairs = findClonePairs(order.map((i) => files[i]!));
+      expect(pairs).toEqual(expected);
+      expect(cloneHitsForHunk(pairs, 'src/c.ts', new Set([1, 2, 3, 4, 5, 6]))).toEqual({
+        duplicatedAddedAtoms: 6,
+        origins: [{ path: 'src/a.ts', side: 'head', startLine: 1, endLine: 6 }],
+      });
+    }
+  });
+
+  it('retains all qualifying partner origins in canonical order', () => {
+    const files = ['c', 'a', 'b'].map((name) => ({ path: `${name}.ts`, tokens: tokens(body(name, 'xs', 'k')) }));
+    const pairs = findClonePairs(files);
+    expect(pairs).toHaveLength(3);
+    expect(cloneHitsForHunk(pairs, 'c.ts', new Set([2, 3, 4]))).toEqual({
+      duplicatedAddedAtoms: 3,
+      origins: ['a', 'b'].map((name) => ({ path: `${name}.ts`, side: 'head', startLine: 1, endLine: 6 })),
+    });
   });
 });
 

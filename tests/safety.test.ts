@@ -247,6 +247,20 @@ describe('git adapter (plan 6.1)', () => {
       await expect(readGitChange(repo, c2, c3)).rejects.toMatchObject({ issues: [{ code: 'git_symlink' }] });
       const c4 = commit([`100644 blob ${a2}\ta.ts`, `160000 commit ${c1}\tvendor`], [c2]);
       await expect(readGitChange(repo, c2, c4)).rejects.toMatchObject({ issues: [{ code: 'git_submodule' }] });
+
+      // Unchanged unsupported entries must be rejected too, on either enumerated side, before any blobs are read.
+      for (const [entry, code] of [
+        [`120000 blob ${blob('a.ts')}\tasset-link`, 'git_symlink'],
+        [`160000 commit ${c1}\tvendor-sub`, 'git_submodule'],
+      ] as const) {
+        const before = commit([`100644 blob ${a1}\ta.ts`, entry], [c1]);
+        const after = commit([`100644 blob ${a2}\ta.ts`, entry], [before]);
+        for (const refs of [[before, after], [after, before]]) {
+          await expect(readGitChange(repo, refs[0]!, refs[1]!)).rejects.toMatchObject({
+            issues: expect.arrayContaining([expect.objectContaining({ code })]),
+          });
+        }
+      }
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
