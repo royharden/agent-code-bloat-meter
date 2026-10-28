@@ -24,3 +24,13 @@ scratch/
 sealed/
 corpus-author-work/
 corpus-author-packet/
+
+# Local credentials and generated archives must not enter the repository
+.creds/
+ArchiveManager-creds.txt
+*.pem
+*.key
+*.p12
+*.pfx
+*.zip
+.cache/
