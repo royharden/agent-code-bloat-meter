@@ -1,0 +1,333 @@
+{
+  "schema": "s45.results/1",
+  "state": "not-yet-measured",
+  "header": {
+    "corpusCommitment": null,
+    "policyHash": null,
+    "preregistrationHash": null,
+    "implementationCommit": null,
+    "attemptId": null
+  },
+  "rows": [
+    {
+      "ordering": "tier-policy",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "size-desc",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "size-asc",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "file-type",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "complexity-only",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "clone-first",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "random",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "jscpd",
+      "status": "not captured",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "sarif:fallow",
+      "status": "not captured",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null
+    },
+    {
+      "ordering": "lizard",
+      "status": "not captured",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null,
+      "statusNote": "licence unresolved"
+    },
+    {
+      "ordering": "label-oracle",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null,
+      "statusNote": "upper bound, uses labels"
+    },
+    {
+      "ordering": "full-review",
+      "status": "not run",
+      "roots": null,
+      "defects": null,
+      "recall10": null,
+      "recall20": null,
+      "recall20CI": null,
+      "recall30": null,
+      "delta20": null,
+      "delta20CI": null,
+      "tier2ShareAll": null,
+      "tier2ShareClean": null,
+      "nearMissesFlagged": null,
+      "manualHunks": null,
+      "partialHunks": null,
+      "providerRequests": null,
+      "spentUsd": null,
+      "statusNote": "ceiling, sanity only"
+    }
+  ],
+  "perFamily": [],
+  "wholeHunk": [],
+  "armB": "arm B not run",
+  "namedFailures": [
+    {
+      "id": "boundary-flip-no-signal",
+      "count": null
+    },
+    {
+      "id": "await-removed-no-signal",
+      "count": null
+    },
+    {
+      "id": "inverted-logic-no-signal",
+      "count": null
+    },
+    {
+      "id": "tiny-wrong-constant",
+      "count": null
+    },
+    {
+      "id": "defect-in-complex-function-no-growth",
+      "count": null
+    },
+    {
+      "id": "guard-deletion-lowers-complexity",
+      "count": null
+    },
+    {
+      "id": "N1-entry-guard",
+      "count": null
+    },
+    {
+      "id": "N2-best-effort-catch",
+      "count": null
+    },
+    {
+      "id": "N3-default-throw",
+      "count": null
+    },
+    {
+      "id": "N4-duplicated-validators",
+      "count": null
+    },
+    {
+      "id": "N5-complex-correct",
+      "count": null
+    },
+    {
+      "id": "N6-large-refactor-size-desc",
+      "count": null
+    },
+    {
+      "id": "N7-unchanged-test-covers",
+      "count": null
+    },
+    {
+      "id": "N8-parse-then-validate",
+      "count": null
+    },
+    {
+      "id": "test-reference-without-assertion",
+      "count": null
+    },
+    {
+      "id": "tsx-render-branch",
+      "count": null
+    },
+    {
+      "id": "test-only-behavior-change",
+      "count": null
+    },
+    {
+      "id": "partial-hunk-at-budget",
+      "count": null
+    },
+    {
+      "id": "deletion-required-atoms",
+      "count": null
+    },
+    {
+      "id": "parse-or-function-map-unknown",
+      "count": null
+    },
+    {
+      "id": "clone-normalization-collision",
+      "count": null
+    }
+  ]
+}

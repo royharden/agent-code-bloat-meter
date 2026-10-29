@@ -7,6 +7,18 @@
   "additionalProperties": false,
   "required": ["schema", "state", "header", "rows", "perFamily", "wholeHunk", "armB", "namedFailures"],
   "properties": {
+    "supplementary": {
+      "type": "object",
+      "description": "Secondary endpoint details and independent named-failure classification provenance, emitted after labels and diagnostic evidence. Not supplied by mocks.",
+      "required": ["tierShares", "endpoints", "diagnostics", "randomPartialHunkConvention"],
+      "additionalProperties": false,
+      "properties": {
+        "tierShares": { "type": "object" },
+        "endpoints": { "type": "array", "items": { "type": "object", "required": ["ordering", "wholeHunk", "budgets"] } },
+        "diagnostics": { "type": "object", "required": ["operatorSession", "evidenceHash"], "properties": { "operatorSession": { "type": "string", "minLength": 1 }, "evidenceHash": { "$ref": "#/$defs/sha256" } } },
+        "randomPartialHunkConvention": { "type": "string" }
+      }
+    },
     "schema": { "const": "s45.results/1" },
     "state": { "enum": ["not-yet-measured", "measured"] },
     "header": {

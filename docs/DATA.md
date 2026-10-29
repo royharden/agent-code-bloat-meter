@@ -29,9 +29,12 @@ Builder-authored files under `fixtures/demo/` and `tests/fixtures/` are engineer
   AgentNamer registry and must differ from every builder's.
 - **Builders** (the integrator and every session it spawns) never author corpus roots, feature changes, defect heads,
   witnesses, site inventories, labels or the independent worksheet, and never write `corpus-gen/`.
-- **Gate operator**: a Normal-mode session that runs C1's `check-data`, records every predicate outcome and, after a
-  pass, copies the dev split into the repo's `corpus/dev/` plus `corpus/heldout.commitment.json`, and the held-out split
-  into the outer shell's `sealed\heldout\`.
+- **Gate operator**: a Roy-appointed non-builder Normal-mode session that runs C1's `check-data`, independently
+  rechecks every predicate and records the outcome. Only after a pass, it copies dev into `corpus/dev/`, the approved
+  full-edition manifest metadata into `corpus/manifest.json`, and `corpus/heldout.commitment.json`. It directs C1 (or a
+  separately Roy-appointed non-builder custodian) to seal held-out contents and write custody receipts. Only the
+  appointed custodian writes `sealed\heldout\` and `sealed\custody\`; an operator may also do so only if explicitly
+  appointed custodian. Builders never read or write those contents.
 - Expected answers are C1's generator labels plus executed witness receipts, produced before any analysis of the corpus.
 
 ## 3. Generation recipe (plan 7.2; C1 only)
@@ -81,6 +84,24 @@ roots. Every `ChangeV1` payload includes the **whole root module tree** (unchang
 and near-misses pass all their witnesses. Compile, import, dependency or timeout failures do not count as a defect
 witness. Each execution emits a `WitnessReceiptV1`.
 
+Every admitted change has at least one `baseSanityReceipts` entry. Label witness/base-sanity paths are relative to
+`<split>/witnesses/<rootId>/`. Each receipt selects one delivered test file with command
+`["vitest", "run", "<split>/witnesses/<rootId>/<path>"]`, optionally followed by
+`["--testNamePattern", "<pattern>"]`. For a defect pair the selection is required: `<pattern>` is `^` + the full
+`defect.witnessTest` runner title with every regex metacharacter escaped + `$`. The clean-pass and defect-failure
+receipts use the identical command, `testHash` and `harnessVersion`; pass has exit code 0 and no `failedTest`, assertion
+failure has a nonzero integer exit code and the named `failedTest`. Other failures/timeouts have nonzero integer exit
+codes and never count as witness evidence. Side/source change through the harness's isolated working tree, never by
+changing test bytes or selection.
+
+**Delivered-test identity check (Gate 1 predicate 1):** C1's `check-data` and the independent gate operator both bind
+every label path and defect command target to its committed witness file and compare its actual exact-byte sha256 to
+the manifest file hash and receipt `testHash`. They reject absent files, path substitutions and mismatched bytes, then
+independently verify that the command selects the named test and reconstruct the executed source tree to check
+`sourceHash`. C1 documents the source-tree hashing algorithm and working-directory setup in `corpus-gen/`/provenance;
+the operator reproduces them. Product `checkReceiptReferences` and `checkDeliveredTestIdentity` check receipt relations
+and manifest identity without execution; these checks alone do not prove actual witness execution.
+
 **Twin size balance (D18).** On dev, the median over defect heads of (defect change total atoms / clean twin total atoms)
 must lie in **[0.67, 1.5]**; actual paired costs are published (twins do not automatically preserve hunk sizes).
 
@@ -120,10 +141,17 @@ conditions.
 
 ## 7. Custody (plan 7.5, D26)
 
-- Held-out sources, tests, labels, witnesses, receipts and site inventories live **only** in the outer shell's
-  `sealed\heldout\` (release receipts in `sealed\custody\`) until the held-out run releases them. Only
-  `corpus/heldout.commitment.json` (sha256 of every sealed file, the seeds and the inventory hash) enters the repo before
-  the freeze.
+- Before Gate 1 the whole delivery remains in C1's custody. After Gate 1, held-out sources, tests, labels, witnesses,
+  receipts and site inventories live **only** in outer `sealed\heldout\` (custody receipts in `sealed\custody\`)
+  until the held-out run releases them. The appointed non-builder custodian performs this sealing.
+- **Explicit metadata exception, integrator reconciliation 2026-10-27:** after Gate 1 and before freeze, the operator
+  may copy exactly one full-edition `CorpusManifestV1` to `corpus/manifest.json`, alongside the held-out commitment.
+  This contract-required metadata exposes root ids/splits/TSX flags, change-to-root links, author/custodian provenance,
+  recipe/family/inventory hashes, seeds, and all committed file paths and hashes (including label hashes). It contains
+  no held-out source, label values, witness/test bytes, receipts or inventory contents. Paths must remain label-neutral;
+  the operator checks this before copying. No additional held-out content is authorized. The commitment binds the
+  exact full manifest bytes. Frozen PLAN-FINAL revision 4.1 remains unchanged; this bounded reconciliation must also
+  be recorded in the freeze receipt and held-out runbook.
 - Builders receive **dev only**, and only after Gate 1.
 - The held-out run creates an exclusive attempt record before any held-out byte is read, releases inputs only, hashes all
   predictions before labels are released, and may resume only as an identical-hash continuation; any change of code,

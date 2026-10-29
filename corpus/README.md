@@ -8,6 +8,8 @@ This folder holds the study corpus **only after Gate 1 passes** (plan 7.3, 7.6; 
 - After Gate 1, the Normal-mode gate operator copies the **dev** split into `corpus/dev/` and adds
   `corpus/heldout.commitment.json` (sha256 of every sealed held-out file, the seeds and the site-inventory hash). The
   held-out split stays sealed in the outer shell (`sealed\heldout\`) until the held-out run.
+  The edition manifest (`CorpusManifestV1`, both splits, held-out entries as hashes only) is copied to
+  `corpus/manifest.json`. Shape and rules: `corpus/heldout.commitment.README.md`.
 - Gate 1 status: **PENDING — needs Roy to appoint C1 and authorise Normal-mode witness execution** (ROY-DECISIONS-REQUEST
   R1).
 

@@ -18,8 +18,9 @@
     "lint": "eslint .",
     "tune": "tsx scripts/tune.ts",
     "freeze": "tsx scripts/freeze.ts",
-    "eval": "tsx scripts/eval.ts",
-    "hash-protocol": "tsx scripts/hash-protocol.ts"
+    "eval": "tsx scripts/run-eval.ts",
+    "hash-protocol": "tsx scripts/hash-protocol.ts",
+    "check-readme-numbers": "tsx scripts/check-readme-numbers.ts"
   },
   "dependencies": {
     "diff": "7.0.0",
